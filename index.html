@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1b3a6b">
+<title>Box Auto</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --blu-targa: #1b3a6b;
+    --blu-targa-dark: #0f2547;
+    --giallo: #f5b400;
+    --giallo-dark: #d99900;
+    --avorio: #f4f1e9;
+    --carta: #ffffff;
+    --inchiostro: #1a1d21;
+    --inchiostro-soft: #5b6168;
+    --linea: #d9d3c4;
+    --rosso: #c0392b;
+    --verde: #2f6b3f;
+    --radius: 14px;
+    --font-display: 'Oswald', 'Arial Narrow', sans-serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  @font-face {
+    font-family: 'Oswald';
+    src: local('Oswald');
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--avorio);
+    font-family: var(--font-body);
+    color: var(--inchiostro);
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+  }
+  #app{max-width:520px; margin:0 auto; min-height:100vh; background:var(--avorio); position:relative; padding-bottom:40px;}
+
+  /* ============ TOPBAR ============ */
+  .topbar{
+    background: var(--blu-targa);
+    color: var(--avorio);
+    padding: 18px 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0; height:6px;
+    background: repeating-linear-gradient(90deg, var(--giallo) 0 18px, transparent 18px 26px);
+  }
+  .topbar-row{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .brand{
+    font-family: var(--font-display);
+    font-weight:600;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand .plate{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--giallo);
+    color: var(--blu-targa-dark);
+    border-radius: 5px;
+    padding: 3px 7px;
+    letter-spacing: 1px;
+    font-weight:700;
+  }
+  .user-chip{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: var(--avorio);
+    display:flex; align-items:center; gap:6px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .user-chip .dot{width:6px;height:6px;border-radius:50%;background:var(--giallo);}
+
+  .back-row{display:flex; align-items:center; gap:10px; margin-top:4px;}
+  .back-btn{
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.25);
+    color:var(--avorio);
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; cursor:pointer;
+  }
+  .back-row .title{font-family:var(--font-display); font-size:20px; text-transform:uppercase; letter-spacing:0.5px;}
+
+  /* ============ SCREENS ============ */
+  .screen{display:none; padding: 20px;}
+  .screen.active{display:block; animation: fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+
+  /* ============ HOME: car selector ============ */
+  .home-lede{
+    font-family: var(--font-body);
+    color: var(--inchiostro-soft);
+    font-size: 14px;
+    margin: 4px 0 18px;
+    line-height:1.5;
+  }
+  .car-grid{display:flex; flex-direction:column; gap:16px;}
+  .car-card{
+    background: var(--carta);
+    border: 2px solid var(--inchiostro);
+    border-radius: var(--radius);
+    padding: 0;
+    overflow:hidden;
+    cursor:pointer;
+    position:relative;
+    box-shadow: 0 3px 0 var(--inchiostro);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .car-card:active{transform: translateY(3px); box-shadow:0 0 0 var(--inchiostro);}
+  .car-card-inner{display:flex; align-items:center; gap:16px; padding:18px 20px;}
+  .car-icon{
+    width:56px; height:56px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:26px; flex-shrink:0;
+  }
+  .car-icon.kangoo{background:#dde8f5; }
+  .car-icon.panda{background:#fbe8d6;}
+  .car-name{
+    font-family: var(--font-display);
+    font-size: 22px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height:1;
+  }
+  .car-sub{font-size:12px; color:var(--inchiostro-soft); margin-top:3px; font-family:var(--font-mono);}
+  .car-arrow{margin-left:auto; font-size:22px; color:var(--inchiostro-soft);}
+  .car-status-bar{height:5px; width:100%;}
+  .car-status-bar.free{background: var(--verde);}
+  .car-status-bar.busy{background: var(--rosso);}
+
+  .legend{display:flex; gap:16px; margin-top:18px; font-size:12px; color:var(--inchiostro-soft);}
+  .legend span{display:flex; align-items:center; gap:6px;}
+  .legend .sw{width:10px;height:10px;border-radius:50%;}
+
+  /* ============ CALENDAR SCREEN ============ */
+  .day-nav{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--carta);
+    border:1px solid var(--linea);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .day-nav button{
+    background:none; border:none; font-size:20px; color:var(--blu-targa);
+    cursor:pointer; padding:4px 10px;
+  }
+  .day-nav .day-label{
+    font-family: var(--font-display);
+    font-size: 16px;
+    text-transform: uppercase;
+    text-align:center;
+  }
+  .day-nav .day-label small{display:block; font-family:var(--font-mono); font-size:11px; color:var(--inchiostro-soft); text-transform:none; margin-top:2px;}
+
+  .add-btn{
+    width:100%;
+    background: var(--giallo);
+    border: 2px solid var(--inchiostro);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-family: var(--font-display);
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor:pointer;
+    box-shadow: 0 3px 0 var(--inchiostro);
+    margin-bottom: 18px;
+    color: var(--inchiostro);
+  }
+  .add-btn:active{transform:translateY(3px); box-shadow:none;}
+
+  .timeline{
+    background: var(--carta);
+    border:1px solid var(--linea);
+    border-radius: var(--radius);
+    padding: 6px 0;
+    position:relative;
+  }
+  .hour-row{
+    display:flex;
+    border-bottom: 1px solid var(--linea);
+    min-height: 30px;
+  }
+  .hour-row:last-child{border-bottom:none;}
+  .hour-label{
+    width:52px; flex-shrink:0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--inchiostro-soft);
+    padding: 4px 8px 0 0;
+    text-align:right;
+    border-right: 1px solid var(--linea);
+  }
+  .hour-slot{flex:1; position:relative;}
+
+  .booking-block{
+    position:absolute;
+    left:6px; right:6px;
+    border-radius:8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    overflow:hidden;
+    cursor:pointer;
+    border-left: 4px solid;
+  }
+  .booking-block .b-name{font-family:var(--font-display); font-size:13px; text-transform:uppercase; letter-spacing:0.3px;}
+  .booking-block .b-time{font-family:var(--font-mono); font-size:11px; opacity:0.85;}
+  .booking-block.mine{background:#fff3cf; border-color: var(--giallo-dark); color:var(--inchiostro);}
+  .booking-block.other{background:#e4ecf7; border-color: var(--blu-targa); color:var(--blu-targa-dark);}
+
+  .empty-day{
+    text-align:center; color:var(--inchiostro-soft);
+    padding: 40px 20px; font-size:14px;
+  }
+
+  /* ============ MODAL ============ */
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,20,30,0.5);
+    display:none; align-items:flex-end; justify-content:center;
+    z-index:50;
+  }
+  .overlay.active{display:flex;}
+  .sheet{
+    background: var(--carta);
+    width:100%; max-width:520px;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 28px;
+    max-height: 88vh;
+    overflow-y:auto;
+    animation: slideup .25s ease;
+  }
+  @keyframes slideup{from{transform:translateY(30px); opacity:0} to{transform:none; opacity:1}}
+  .sheet-handle{width:40px; height:4px; background:var(--linea); border-radius:2px; margin: 0 auto 16px;}
+  .sheet-title{
+    font-family: var(--font-display);
+    font-size: 20px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block; font-size:12px; text-transform:uppercase;
+    letter-spacing:0.5px; color:var(--inchiostro-soft); margin-bottom:6px;
+    font-family: var(--font-mono);
+  }
+  .field input[type=text]{
+    width:100%; border:2px solid var(--linea); border-radius:10px;
+    padding:12px 14px; font-size:16px; font-family:var(--font-body);
+    background: var(--avorio);
+  }
+  .field input:focus{outline:none; border-color:var(--blu-targa);}
+  .row2{display:flex; gap:12px;}
+  .row2 .field{flex:1;}
+  .time-input-group{display:flex; gap:8px;}
+  .time-input-group select{
+    flex:1; border:2px solid var(--linea); border-radius:10px;
+    padding:12px 6px; font-size:16px; font-family:var(--font-mono);
+    background: var(--avorio); text-align:center;
+  }
+  .car-toggle{display:flex; gap:10px;}
+  .car-toggle button{
+    flex:1; padding:12px; border-radius:10px; border:2px solid var(--linea);
+    background:var(--avorio); font-family:var(--font-display); text-transform:uppercase;
+    font-size:14px; cursor:pointer; color:var(--inchiostro-soft);
+  }
+  .car-toggle button.active{
+    border-color: var(--blu-targa); background:var(--blu-targa); color:var(--avorio);
+  }
+  .error-box{
+    background:#fbe7e4; border:1px solid var(--rosso); color:var(--rosso);
+    border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:14px;
+    display:none;
+  }
+  .error-box.active{display:block;}
+  .sheet-actions{display:flex; gap:10px; margin-top:6px;}
+  .btn{
+    flex:1; padding:14px; border-radius:12px; border:2px solid var(--inchiostro);
+    font-family: var(--font-display); text-transform:uppercase; font-size:15px;
+    cursor:pointer; box-shadow: 0 3px 0 var(--inchiostro);
+  }
+  .btn:active{transform:translateY(3px); box-shadow:none;}
+  .btn-primary{background: var(--giallo); color:var(--inchiostro);}
+  .btn-danger{background: var(--rosso); color:var(--avorio); border-color:var(--rosso); box-shadow:0 3px 0 #8e2a1f;}
+  .btn-ghost{background:var(--carta); color:var(--inchiostro-soft); border-color:var(--linea); box-shadow:none;}
+
+  .loading-row{display:flex; align-items:center; justify-content:center; gap:10px; padding:30px; color:var(--inchiostro-soft); font-size:13px;}
+  .spinner{
+    width:18px; height:18px; border-radius:50%;
+    border: 3px solid var(--linea); border-top-color: var(--blu-targa);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background: var(--inchiostro); color:var(--avorio);
+    padding: 12px 20px; border-radius: 10px; font-size:14px;
+    z-index:100; max-width:90%; text-align:center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  }
+
+  .name-gate{
+    position:fixed; inset:0; background:var(--blu-targa);
+    display:flex; align-items:center; justify-content:center;
+    z-index:200; padding:24px;
+  }
+  .name-gate-card{
+    background:var(--carta); border-radius: var(--radius); padding:28px 24px;
+    max-width: 380px; width:100%; text-align:center;
+  }
+  .name-gate-card .plate-big{
+    font-family: var(--font-mono); background:var(--giallo); color:var(--blu-targa-dark);
+    display:inline-block; padding:6px 16px; border-radius:8px; font-weight:700;
+    letter-spacing:2px; margin-bottom:18px; font-size:14px;
+  }
+  .name-gate-card h1{font-family:var(--font-display); text-transform:uppercase; font-size:24px; margin:0 0 8px;}
+  .name-gate-card p{font-size:13px; color:var(--inchiostro-soft); margin:0 0 20px; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div id="nameGate" class="name-gate">
+  <div class="name-gate-card">
+    <span class="plate-big">BOX AUTO</span>
+    <h1>Come ti chiami?</h1>
+    <p>Serve per sapere chi prenota e per permetterti di modificare solo le tue prenotazioni.</p>
+    <div class="field" style="text-align:left;">
+      <input type="text" id="nameGateInput" placeholder="Es. Marco R." maxlength="30">
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="saveUserName()">Continua</button>
+  </div>
+</div>
+
+<div id="app">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand"><span class="plate">BOX</span> Auto</div>
+      <div class="user-chip" id="userChip" onclick="changeUserName()"><span class="dot"></span><span id="userChipName">—</span></div>
+    </div>
+    <div class="back-row" id="backRow" style="display:none;">
+      <button class="back-btn" onclick="goHome()">‹</button>
+      <div class="title" id="screenTitle"></div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <p class="home-lede">Scegli un'auto per vedere e gestire le prenotazioni.</p>
+    <div class="car-grid">
+      <div class="car-card" onclick="openCar('Panda')">
+        <div class="car-status-bar" id="statusbar-Panda"></div>
+        <div class="car-card-inner">
+          <div class="car-icon panda">🚗</div>
+          <div>
+            <div class="car-name">Fiat Panda</div>
+            <div class="car-sub" id="statustext-Panda">verifica…</div>
+          </div>
+          <div class="car-arrow">›</div>
+        </div>
+      </div>
+      <div class="car-card" onclick="openCar('Kangoo')">
+        <div class="car-status-bar" id="statusbar-Kangoo"></div>
+        <div class="car-card-inner">
+          <div class="car-icon kangoo">🚐</div>
+          <div>
+            <div class="car-name">Renault Kangoo</div>
+            <div class="car-sub" id="statustext-Kangoo">verifica…</div>
+          </div>
+          <div class="car-arrow">›</div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--verde)"></span> libera ora</span>
+      <span><span class="sw" style="background:var(--rosso)"></span> occupata ora</span>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="screen" id="screen-calendar">
+    <div class="day-nav">
+      <button onclick="shiftDay(-1)">‹</button>
+      <div class="day-label" id="dayLabel">—<small id="dayLabelSub"></small></div>
+      <button onclick="shiftDay(1)">›</button>
+    </div>
+    <button class="add-btn" onclick="openBookingForm()">+ Nuova prenotazione</button>
+    <div id="timelineWrap">
+      <div class="loading-row"><div class="spinner"></div> carico prenotazioni…</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOOKING FORM SHEET -->
+<div class="overlay" id="formOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="formTitle">Nuova prenotazione</div>
+    <div class="error-box" id="formError"></div>
+
+    <div class="field">
+      <label>Auto</label>
+      <div class="car-toggle">
+        <button type="button" id="toggle-Panda" onclick="setFormCar('Panda')">Panda</button>
+        <button type="button" id="toggle-Kangoo" onclick="setFormCar('Kangoo')">Kangoo</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Data</label>
+      <input type="text" id="formDate" readonly style="cursor:pointer;" onclick="document.getElementById('formDateNative').showPicker && document.getElementById('formDateNative').showPicker()">
+      <input type="date" id="formDateNative" style="position:absolute; opacity:0; height:0; width:0;" onchange="syncDateDisplay()">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Inizio</label>
+        <div class="time-input-group">
+          <select id="startHour"></select>
+          <select id="startMin"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Fine</label>
+        <div class="time-input-group">
+          <select id="endHour"></select>
+          <select id="endMin"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Note (opzionale)</label>
+      <input type="text" id="formNote" placeholder="Es. spesa, aeroporto…" maxlength="60">
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeForm()">Annulla</button>
+      <button class="btn btn-primary" id="formSaveBtn" onclick="submitBooking()">Prenota</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL SHEET -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="detailTitle">Prenotazione</div>
+    <div id="detailBody" style="font-size:14px; color:var(--inchiostro-soft); margin-bottom:18px; line-height:1.6;"></div>
+    <div class="sheet-actions" id="detailActions"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURAZIONE
+   ============================================================ */
+// 👉 Sostituisci con l'URL della tua distribuzione Apps Script (finisce con /exec)
+const SCRIPT_URL = "https://script.google.com/a/macros/cdgvr.it/s/AKfycbyuIgj1nh9NjTfcx8Q4-m6qChGsHeBO70pvN3GfAm7icZkvs_AVrG2VYhTZ5GLR1bsW/exec";
+
+const CARS = ["Panda", "Kangoo"];
+
+/* ============================================================
+   STATO
+   ============================================================ */
+let state = {
+  userName: localStorage.getItem('boxauto_name') || '',
+  currentCar: null,
+  currentDay: stripTime(new Date()),
+  bookings: [], // tutte le prenotazioni, tutte le auto
+  formMode: 'create', // create | edit
+  formCar: 'Panda',
+  formEditingId: null,
+  loaded: false
+};
+
+function stripTime(d){
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  return x;
+}
+
+/* ============================================================
+   NAME GATE
+   ============================================================ */
+function initNameGate(){
+  if(state.userName){
+    document.getElementById('nameGate').style.display = 'none';
+    document.getElementById('userChipName').textContent = state.userName;
+  } else {
+    document.getElementById('nameGate').style.display = 'flex';
+  }
+}
+function saveUserName(){
+  const v = document.getElementById('nameGateInput').value.trim();
+  if(!v){ return; }
+  state.userName = v;
+  localStorage.setItem('boxauto_name', v);
+  document.getElementById('userChipName').textContent = v;
+  document.getElementById('nameGate').style.display = 'none';
+}
+function changeUserName(){
+  const v = prompt("Il tuo nome (visibile alle altre persone):", state.userName || '');
+  if(v === null) return;
+  const trimmed = v.trim();
+  if(!trimmed) return;
+  state.userName = trimmed;
+  localStorage.setItem('boxauto_name', trimmed);
+  document.getElementById('userChipName').textContent = trimmed;
+}
+
+/* ============================================================
+   NAVIGAZIONE
+   ============================================================ */
+function goHome(){
+  state.currentCar = null;
+  showScreen('home');
+  document.getElementById('backRow').style.display = 'none';
+  refreshHomeStatus();
+}
+function openCar(car){
+  state.currentCar = car;
+  state.currentDay = stripTime(new Date());
+  showScreen('calendar');
+  document.getElementById('backRow').style.display = 'flex';
+  document.getElementById('screenTitle').textContent = car === 'Panda' ? 'Fiat Panda' : 'Renault Kangoo';
+  renderDayLabel();
+  renderTimeline();
+}
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+function shiftDay(delta){
+  const d = new Date(state.currentDay);
+  d.setDate(d.getDate() + delta);
+  state.currentDay = d;
+  renderDayLabel();
+  renderTimeline();
+}
+
+const GIORNI = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+function renderDayLabel(){
+  const d = state.currentDay;
+  const today = stripTime(new Date());
+  const isToday = d.getTime() === today.getTime();
+  document.getElementById('dayLabel').innerHTML =
+    GIORNI[d.getDay()] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] +
+    '<small>' + (isToday ? 'oggi' : '') + '</small>';
+}
+
+/* ============================================================
+   API
+   ============================================================ */
+function apiGet(){
+  return fetch(SCRIPT_URL, {method:'GET'})
+    .then(r => r.json());
+}
+function apiPost(payload){
+  return fetch(SCRIPT_URL, {
+    method:'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'}, // evita preflight CORS su Apps Script
+    body: JSON.stringify(payload)
+  }).then(r => r.json());
+}
+
+function loadBookings(){
+  return apiGet().then(res => {
+    if(res.ok){
+      state.bookings = res.data;
+      state.loaded = true;
+    } else {
+      showToast('Errore caricamento: ' + res.error);
+    }
+  }).catch(err => {
+    showToast('Connessione non riuscita. Controlla SCRIPT_URL.');
+    console.error(err);
+  });
+}
+
+/* ============================================================
+   HOME STATUS (libera/occupata ora)
+   ============================================================ */
+function refreshHomeStatus(){
+  const now = new Date();
+  CARS.forEach(car => {
+    const active = state.bookings.find(b => b.auto === car && new Date(b.inizio) <= now && now < new Date(b.fine));
+    const bar = document.getElementById('statusbar-' + car);
+    const txt = document.getElementById('statustext-' + car);
+    if(active){
+      bar.className = 'car-status-bar busy';
+      txt.textContent = 'occupata da ' + active.nome + ' fino alle ' + fmtTime(active.fine);
+    } else {
+      bar.className = 'car-status-bar free';
+      txt.textContent = 'libera ora';
+    }
+  });
+}
+
+/* ============================================================
+   TIMELINE RENDERING
+   ============================================================ */
+function renderTimeline(){
+  const wrap = document.getElementById('timelineWrap');
+  if(!state.loaded){
+    wrap.innerHTML = '<div class="loading-row"><div class="spinner"></div> carico prenotazioni…</div>';
+    return;
+  }
+  const dayStart = new Date(state.currentDay);
+  const dayEnd = new Date(state.currentDay);
+  dayEnd.setDate(dayEnd.getDate()+1);
+
+  const dayBookings = state.bookings.filter(b => {
+    if(b.auto !== state.currentCar) return false;
+    const s = new Date(b.inizio), e = new Date(b.fine);
+    return s < dayEnd && e > dayStart;
+  });
+
+  let html = '<div class="timeline" id="timelineInner" style="position:relative;">';
+  for(let h=0; h<24; h++){
+    html += '<div class="hour-row"><div class="hour-label">' + String(h).padStart(2,'0') + ':00</div><div class="hour-slot"></div></div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  if(dayBookings.length === 0){
+    // niente overlay aggiuntivo, la riga "+ nuova prenotazione" basta. Ma aggiungiamo nota leggera:
+  }
+
+  const ROW_H = 30; // px per ora, deve combaciare col CSS min-height .hour-row
+  const container = document.getElementById('timelineInner');
+  const totalHeight = ROW_H * 24;
+
+  dayBookings.forEach(b => {
+    let s = new Date(b.inizio);
+    let e = new Date(b.fine);
+    if(s < dayStart) s = new Date(dayStart);
+    if(e > dayEnd) e = new Date(dayEnd);
+
+    const startMin = (s - dayStart) / 60000;
+    const endMin = (e - dayStart) / 60000;
+    const top = (startMin / 60) * ROW_H;
+    const height = Math.max(((endMin - startMin) / 60) * ROW_H, 22);
+
+    const mine = b.nome === state.userName;
+    const block = document.createElement('div');
+    block.className = 'booking-block ' + (mine ? 'mine' : 'other');
+    block.style.top = top + 'px';
+    block.style.height = height + 'px';
+    block.style.left = '60px';
+    block.innerHTML = '<div class="b-name">' + escapeHtml(b.nome) + '</div><div class="b-time">' + fmtTime(b.inizio) + ' – ' + fmtTime(b.fine) + '</div>';
+    block.onclick = () => openDetail(b);
+    container.style.position = 'relative';
+    container.appendChild(block);
+  });
+}
+
+function fmtTime(iso){
+  const d = new Date(iso);
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============================================================
+   DETTAGLIO PRENOTAZIONE
+   ============================================================ */
+function openDetail(b){
+  document.getElementById('detailTitle').textContent = b.auto + ' — ' + b.nome;
+  const d = new Date(b.inizio);
+  const sameDay = new Date(b.inizio).toDateString() === new Date(b.fine).toDateString();
+  let when;
+  if(sameDay){
+    when = formatDateLong(b.inizio) + ', ' + fmtTime(b.inizio) + ' – ' + fmtTime(b.fine);
+  } else {
+    when = formatDateLong(b.inizio) + ' ' + fmtTime(b.inizio) + ' → ' + formatDateLong(b.fine) + ' ' + fmtTime(b.fine);
+  }
+  document.getElementById('detailBody').innerHTML =
+    '<strong>Quando:</strong> ' + when + '<br>' +
+    (b.note ? '<strong>Note:</strong> ' + escapeHtml(b.note) : '');
+
+  const mine = b.nome === state.userName;
+  const actions = document.getElementById('detailActions');
+  if(mine){
+    actions.innerHTML = '';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-ghost';
+    editBtn.textContent = 'Modifica';
+    editBtn.onclick = () => { closeDetail(); openBookingForm(b); };
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.textContent = 'Cancella';
+    delBtn.onclick = () => deleteBooking(b);
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+  } else {
+    actions.innerHTML = '<button class="btn btn-ghost" style="flex:1" onclick="closeDetail()">Chiudi</button>';
+  }
+  document.getElementById('detailOverlay').classList.add('active');
+}
+function closeDetail(){
+  document.getElementById('detailOverlay').classList.remove('active');
+}
+function formatDateLong(iso){
+  const d = new Date(iso);
+  return d.getDate() + ' ' + MESI[d.getMonth()];
+}
+
+function deleteBooking(b){
+  if(!confirm('Cancellare questa prenotazione?')) return;
+  apiPost({action:'delete', id:b.id, nome:state.userName}).then(res => {
+    if(res.ok){
+      closeDetail();
+      showToast('Prenotazione cancellata.');
+      loadBookings().then(() => { renderTimeline(); refreshHomeStatus(); });
+    } else {
+      showToast(res.error);
+    }
+  });
+}
+
+/* ============================================================
+   FORM PRENOTAZIONE (crea / modifica)
+   ============================================================ */
+function populateTimeSelects(){
+  const hourSelects = ['startHour','endHour'];
+  const minSelects = ['startMin','endMin'];
+  hourSelects.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    for(let h=0; h<24; h++){
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = String(h).padStart(2,'0');
+      sel.appendChild(opt);
+    }
+  });
+  minSelects.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    for(let m=0; m<60; m++){
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = String(m).padStart(2,'0');
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function setFormCar(car){
+  state.formCar = car;
+  document.getElementById('toggle-Panda').classList.toggle('active', car === 'Panda');
+  document.getElementById('toggle-Kangoo').classList.toggle('active', car === 'Kangoo');
+}
+
+function syncDateDisplay(){
+  const native = document.getElementById('formDateNative').value; // yyyy-mm-dd
+  if(!native) return;
+  const d = new Date(native + 'T00:00:00');
+  document.getElementById('formDate').value = GIORNI[d.getDay()] + ' ' + d.getDate() + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function openBookingForm(existing){
+  populateTimeSelects();
+  document.getElementById('formError').classList.remove('active');
+
+  if(existing){
+    state.formMode = 'edit';
+    state.formEditingId = existing.id;
+    document.getElementById('formTitle').textContent = 'Modifica prenotazione';
+    document.getElementById('formSaveBtn').textContent = 'Salva modifiche';
+    setFormCar(existing.auto);
+    const s = new Date(existing.inizio), e = new Date(existing.fine);
+    document.getElementById('formDateNative').value = toInputDate(s);
+    syncDateDisplay();
+    document.getElementById('startHour').value = s.getHours();
+    document.getElementById('startMin').value = s.getMinutes();
+    document.getElementById('endHour').value = e.getHours();
+    document.getElementById('endMin').value = e.getMinutes();
+    document.getElementById('formNote').value = existing.note || '';
+  } else {
+    state.formMode = 'create';
+    state.formEditingId = null;
+    document.getElementById('formTitle').textContent = 'Nuova prenotazione';
+    document.getElementById('formSaveBtn').textContent = 'Prenota';
+    setFormCar(state.currentCar || 'Panda');
+    document.getElementById('formDateNative').value = toInputDate(state.currentDay || new Date());
+    syncDateDisplay();
+    const now = new Date();
+    document.getElementById('startHour').value = now.getHours();
+    document.getElementById('startMin').value = now.getMinutes();
+    const plus1 = new Date(now.getTime() + 60*60000);
+    document.getElementById('endHour').value = plus1.getHours();
+    document.getElementById('endMin').value = plus1.getMinutes();
+    document.getElementById('formNote').value = '';
+  }
+  document.getElementById('formOverlay').classList.add('active');
+}
+function closeForm(){
+  document.getElementById('formOverlay').classList.remove('active');
+}
+function toInputDate(d){
+  const x = new Date(d);
+  return x.getFullYear() + '-' + String(x.getMonth()+1).padStart(2,'0') + '-' + String(x.getDate()).padStart(2,'0');
+}
+
+function submitBooking(){
+  if(!state.userName){
+    document.getElementById('nameGate').style.display = 'flex';
+    return;
+  }
+  const dateStr = document.getElementById('formDateNative').value;
+  if(!dateStr){
+    formError('Scegli una data.');
+    return;
+  }
+  const sh = parseInt(document.getElementById('startHour').value, 10);
+  const sm = parseInt(document.getElementById('startMin').value, 10);
+  const eh = parseInt(document.getElementById('endHour').value, 10);
+  const em = parseInt(document.getElementById('endMin').value, 10);
+
+  const inizio = new Date(dateStr + 'T00:00:00');
+  inizio.setHours(sh, sm, 0, 0);
+  const fine = new Date(dateStr + 'T00:00:00');
+  fine.setHours(eh, em, 0, 0);
+  if(fine <= inizio){
+    fine.setDate(fine.getDate()+1); // assume attraversa la mezzanotte
+  }
+
+  const payload = {
+    action: state.formMode === 'edit' ? 'update' : 'create',
+    id: state.formEditingId,
+    auto: state.formCar,
+    nome: state.userName,
+    inizio: inizio.toISOString(),
+    fine: fine.toISOString(),
+    note: document.getElementById('formNote').value.trim()
+  };
+
+  document.getElementById('formSaveBtn').textContent = 'Salvo…';
+  apiPost(payload).then(res => {
+    if(res.ok){
+      closeForm();
+      showToast(state.formMode === 'edit' ? 'Prenotazione aggiornata.' : 'Prenotazione confermata.');
+      loadBookings().then(() => { renderTimeline(); refreshHomeStatus(); });
+    } else {
+      formError(res.error || 'Errore imprevisto.');
+    }
+  }).catch(err => {
+    formError('Connessione non riuscita.');
+    console.error(err);
+  }).finally(() => {
+    document.getElementById('formSaveBtn').textContent = state.formMode === 'edit' ? 'Salva modifiche' : 'Prenota';
+  });
+}
+function formError(msg){
+  const box = document.getElementById('formError');
+  box.textContent = msg;
+  box.classList.add('active');
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer = null;
+function showToast(msg){
+  let t = document.getElementById('toastEl');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toastEl';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3200);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  initNameGate();
+  loadBookings().then(() => {
+    renderTimeline();
+    refreshHomeStatus();
+  });
+  // refresh periodico per vedere prenotazioni di altri quasi in tempo reale
+  setInterval(() => {
+    loadBookings().then(() => {
+      if(state.currentCar) renderTimeline();
+      refreshHomeStatus();
+    });
+  }, 20000);
+}
+init();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW non registrato', err));
+  });
+}
+</script>
+</body>
+</html>
