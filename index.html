@@ -474,10 +474,18 @@
 
 <script>
 /* ============================================================
-   CONFIGURAZIONE
+   CONFIGURAZIONE JSONBin
    ============================================================ */
-// 👉 Sostituisci con l'URL della tua distribuzione Apps Script (finisce con /exec)
-const SCRIPT_URL = "https://script.google.com/a/macros/cdgvr.it/s/AKfycbyuIgj1nh9NjTfcx8Q4-m6qChGsHeBO70pvN3GfAm7icZkvs_AVrG2VYhTZ5GLR1bsW/exec";
+// 👉 Incolla qui la tua API key di JSONBin (inizia con $2b$...)
+const JSONBIN_KEY = "$2a$10$wskatPcggNEdYVVejp1p1ODonsvizLNZrldN6CZzWaxUQbjDUpeS2";
+const JSONBIN_BIN_ID = "6a5a80f8f5f4af5e299deca7";
+
+const JSONBIN_URL = "https://api.jsonbin.io/v3/b/" + JSONBIN_BIN_ID;
+const JSONBIN_HEADERS = {
+  "Content-Type": "application/json",
+  "X-Master-Key": JSONBIN_KEY,
+  "X-Bin-Versioning": "false"  // sovrascrive sempre l'ultima versione, non crea versioni infinite
+};
 
 const CARS = ["Panda", "Kangoo"];
 
@@ -573,31 +581,102 @@ function renderDayLabel(){
 }
 
 /* ============================================================
-   API
+   API — JSONBin
+   JSONBin salva UN solo oggetto JSON (il "bin").
+   Noi salviamo {bookings: [...]} e lo riscriviamo ogni volta.
+   Lettura = GET, scrittura = PUT con la lista aggiornata.
    ============================================================ */
-function apiGet(){
-  return fetch(SCRIPT_URL, {method:'GET'})
-    .then(r => r.json());
+
+function readBin(){
+  return fetch(JSONBIN_URL + "/latest", {
+    method: 'GET',
+    headers: JSONBIN_HEADERS
+  }).then(r => r.json()).then(res => res.record.bookings || []);
 }
-function apiPost(payload){
-  return fetch(SCRIPT_URL, {
-    method:'POST',
-    headers: {'Content-Type':'text/plain;charset=utf-8'}, // evita preflight CORS su Apps Script
-    body: JSON.stringify(payload)
+
+function writeBin(bookings){
+  return fetch(JSONBIN_URL, {
+    method: 'PUT',
+    headers: JSONBIN_HEADERS,
+    body: JSON.stringify({bookings: bookings})
   }).then(r => r.json());
 }
 
+function genId(){
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function overlaps(aStart, aEnd, bStart, bEnd){
+  return aStart < bEnd && bStart < aEnd;
+}
+
 function loadBookings(){
-  return apiGet().then(res => {
-    if(res.ok){
-      state.bookings = res.data;
-      state.loaded = true;
-    } else {
-      showToast('Errore caricamento: ' + res.error);
-    }
+  return readBin().then(bookings => {
+    state.bookings = bookings;
+    state.loaded = true;
   }).catch(err => {
-    showToast('Connessione non riuscita. Controlla SCRIPT_URL.');
+    showToast('Connessione non riuscita. Controlla la API key JSONBin.');
     console.error(err);
+  });
+}
+
+// Crea una nuova prenotazione
+function apiCreate(payload){
+  return readBin().then(bookings => {
+    const inizio = new Date(payload.inizio);
+    const fine = new Date(payload.fine);
+    // controllo sovrapposizione
+    const conflict = bookings.find(b =>
+      b.auto === payload.auto &&
+      overlaps(inizio, fine, new Date(b.inizio), new Date(b.fine))
+    );
+    if(conflict){
+      return {ok: false, error: 'Orario sovrapposto con la prenotazione di ' + conflict.nome +
+        ' (' + fmtTime(conflict.inizio) + '–' + fmtTime(conflict.fine) + ')'};
+    }
+    const newBooking = {
+      id: genId(),
+      auto: payload.auto,
+      nome: payload.nome,
+      inizio: payload.inizio,
+      fine: payload.fine,
+      note: payload.note || ''
+    };
+    bookings.push(newBooking);
+    return writeBin(bookings).then(() => ({ok: true}));
+  });
+}
+
+// Modifica una prenotazione esistente
+function apiUpdate(payload){
+  return readBin().then(bookings => {
+    const idx = bookings.findIndex(b => b.id === payload.id);
+    if(idx === -1) return {ok: false, error: 'Prenotazione non trovata.'};
+    if(bookings[idx].nome !== payload.nome) return {ok: false, error: 'Solo chi ha creato la prenotazione può modificarla.'};
+    const inizio = new Date(payload.inizio);
+    const fine = new Date(payload.fine);
+    const conflict = bookings.find(b =>
+      b.id !== payload.id &&
+      b.auto === payload.auto &&
+      overlaps(inizio, fine, new Date(b.inizio), new Date(b.fine))
+    );
+    if(conflict){
+      return {ok: false, error: 'Orario sovrapposto con la prenotazione di ' + conflict.nome +
+        ' (' + fmtTime(conflict.inizio) + '–' + fmtTime(conflict.fine) + ')'};
+    }
+    bookings[idx] = {...bookings[idx], ...payload};
+    return writeBin(bookings).then(() => ({ok: true}));
+  });
+}
+
+// Cancella una prenotazione
+function apiDelete(payload){
+  return readBin().then(bookings => {
+    const idx = bookings.findIndex(b => b.id === payload.id);
+    if(idx === -1) return {ok: false, error: 'Prenotazione non trovata.'};
+    if(bookings[idx].nome !== payload.nome) return {ok: false, error: 'Solo chi ha creato la prenotazione può cancellarla.'};
+    bookings.splice(idx, 1);
+    return writeBin(bookings).then(() => ({ok: true}));
   });
 }
 
@@ -732,7 +811,7 @@ function formatDateLong(iso){
 
 function deleteBooking(b){
   if(!confirm('Cancellare questa prenotazione?')) return;
-  apiPost({action:'delete', id:b.id, nome:state.userName}).then(res => {
+  apiDelete({id:b.id, nome:state.userName}).then(res => {
     if(res.ok){
       closeDetail();
       showToast('Prenotazione cancellata.');
@@ -852,7 +931,6 @@ function submitBooking(){
   }
 
   const payload = {
-    action: state.formMode === 'edit' ? 'update' : 'create',
     id: state.formEditingId,
     auto: state.formCar,
     nome: state.userName,
@@ -861,8 +939,9 @@ function submitBooking(){
     note: document.getElementById('formNote').value.trim()
   };
 
+  const apiFn = state.formMode === 'edit' ? apiUpdate : apiCreate;
   document.getElementById('formSaveBtn').textContent = 'Salvo…';
-  apiPost(payload).then(res => {
+  apiFn(payload).then(res => {
     if(res.ok){
       closeForm();
       showToast(state.formMode === 'edit' ? 'Prenotazione aggiornata.' : 'Prenotazione confermata.');
